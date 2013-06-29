@@ -16,7 +16,11 @@
       "name" : "Brian Gershon",
       "url" : "http://http://blog.evolvingbits.com/"
   },
-  "license": "MIT",
+  "license": [
+    { "type" : "MIT",
+      "url" : "https://github.com/briangershon/heirloom/raw/master/LICENSE"
+    }
+  ],
   "dependencies": {
     "knox": "~0.8.3",
     "s3": "~0.3.0",
