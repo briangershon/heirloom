@@ -1,6 +1,6 @@
 {
   "name": "heirloom",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "bin" : { "heirloom" : "./index.js" },
   "description": "Backup your family photos (or any file) efficiently to Amazon S3",
   "keywords": "aws, s3, backup, archive, photos",

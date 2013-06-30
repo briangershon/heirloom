@@ -60,7 +60,7 @@ async.series([
             secret: awsSecretKey,
             bucket: awsBucket
         });
-        client.head(filePathToBackup).on('response', function(res) {
+        client.head(encodeURI(filePathToBackup)).on('response', function(res) {
             // console.log("etag", res.headers.etag);
             etag = res.headers.etag;
             callback(null, 'remote etag head request');
@@ -84,7 +84,7 @@ async.series([
         });
         
         // upload a file to s3
-        var uploader = client.upload(filePathToBackup, filePathToBackup);
+        var uploader = client.upload(filePathToBackup, encodeURI(filePathToBackup));
         uploader.on('error', function(err) {
             console.error("unable to upload:", err.stack);
             callback('unable to uplaod ' + filePathToBackup + ' due to ' + err.stack, ERROR_STOP);
@@ -120,4 +120,12 @@ function searchStringInArray (str, strArray) {
         if (strArray[j].match(str)) return j;
     }
     return -1;
+}
+
+function encodeURI (path) {
+    var newPath = path;
+    if (path.charAt(0) === '/') {
+        newPath = path.slice(1);
+    }
+    return encodeURIComponent(newPath);
 }
