@@ -6,7 +6,7 @@ Backup a file to S3, but only if it has changed or has not been uploaded before.
 
 ## Status of build
 
-[![Build Status](https://travis-ci.org/briangershon/heirloom.png)](https://travis-ci.org/briangershon/heirloom)
+[![Build Status](https://travis-ci.org/briangershon/heirloom.png?branch=master)](https://travis-ci.org/briangershon/heirloom)
 
 ## Getting Started
 
