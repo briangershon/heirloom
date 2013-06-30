@@ -7,28 +7,18 @@ var ALREADY_EXISTS = 'file already exists on remote',
 var s3 = require('s3'),
     knox = require('knox'),
     crypto = require('crypto'),
-    fs = require('fs'),
     async = require('async');
 
-// TODO: Should filePathToBackup just be a stream?
-function upload (filePathToBackup, awsBucket, awsAccessKey, awsSecretKey) {
-    var md5, etag;
+// TODO: Remove these global variables and use async.waterfall and pass them as parameters to next step
+var md5, etag;
+
+function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
 
     console.log('Processing ' + filePathToBackup);
 
     async.series([
         function(callback) {
-            //console.log('START md5 calc');
-            var md5sum = crypto.createHash('md5');
-            var s = fs.ReadStream(filePathToBackup);
-            s.on('data', function(d) {
-                md5sum.update(d);
-            });
-            s.on('end', function() {
-                md5 = md5sum.digest('hex');
-                //console.log('local file md5: ' + md5);
-                callback(null, 'local md5 calc');
-            });
+            md5calc(fileStream, callback);
         }, 
 
         function(callback) {
@@ -48,7 +38,7 @@ function upload (filePathToBackup, awsBucket, awsAccessKey, awsSecretKey) {
         },
 
         function(callback) {
-            // console.log('START uploader');
+            // console.log('START uploader... md5 is ', md5, ' etag is ', etag);
             if ('"' + md5 + '"' === etag) {
                 //file already uploaded
                 callback(null, ALREADY_EXISTS);
@@ -72,7 +62,7 @@ function upload (filePathToBackup, awsBucket, awsAccessKey, awsSecretKey) {
                 //process.stdout.write(''+Math.round(Number((amountDone/amountTotal) * 100))+', ');
             });
             uploader.on('end', function(url) {
-                console.log("file available at", url);
+                // console.log("file available at", url);
                 callback(null, SUCCESS_UPLOAD);
             });
         }],
@@ -92,13 +82,26 @@ function upload (filePathToBackup, awsBucket, awsAccessKey, awsSecretKey) {
             process.exit(0);
         }
     );
+}
 
-    function searchStringInArray (str, strArray) {
-        for (var j=0; j<strArray.length; j++) {
-            if (strArray[j].match(str)) return j;
-        }
-        return -1;
+function md5calc(fileStream, callback) {
+    // console.log('START md5 calc');
+    var md5sum = crypto.createHash('md5');
+    var s = fileStream;
+    s.on('data', function(d) {
+        md5sum.update(d);
+    });
+    s.on('end', function() {
+        md5 = md5sum.digest('hex');
+        callback(null, md5);
+    });
+}
+
+function searchStringInArray (str, strArray) {
+    for (var j=0; j<strArray.length; j++) {
+        if (strArray[j].match(str)) return j;
     }
+    return -1;
 }
 
 function encodeURI (path) {
@@ -114,3 +117,5 @@ exports.upload = upload;
 
 //helper functions exported for testing
 exports.encodeURI = encodeURI;
+exports.searchStringInArray = searchStringInArray;
+exports.md5calc = md5calc;

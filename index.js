@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-var toS3 = require('./tos3');
+var toS3 = require('./tos3'),
+    fs = require('fs');
     
 var argv = require('optimist')
     .usage('Backup your family photos (or any file) efficiently to Amazon S3')
@@ -26,4 +27,4 @@ if (!awsAccessKey || !awsSecretKey) {
     process.exit(1);
 }
 
-toS3.upload(filePathToBackup, awsBucket, awsAccessKey, awsSecretKey);
+toS3.upload(filePathToBackup, fs.ReadStream(filePathToBackup), awsBucket, awsAccessKey, awsSecretKey);
