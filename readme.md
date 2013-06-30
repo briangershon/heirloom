@@ -4,6 +4,10 @@ Useful for efficiently backing up your family photo collection (or any files).
 
 Backup a file to S3, but only if it has changed or has not been uploaded before.
 
+## Status of build
+
+[![Build Status](https://travis-ci.org/briangershon/heirloom.png)](https://travis-ci.org/briangershon/heirloom)
+
 ## Getting Started
 
         # install as a command-line tool
