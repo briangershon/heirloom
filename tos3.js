@@ -17,18 +17,18 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
     console.log('Processing ' + filePathToBackup);
 
     async.series([
-        function(callback) {
+        function (callback) {
             md5calc(fileStream, callback);
         }, 
 
-        function(callback) {
+        function (callback) {
             // console.log('START remote etag head request');
             var client = knox.createClient({
                 key: awsAccessKey,
                 secret: awsSecretKey,
                 bucket: awsBucket
             });
-            client.head(encodeURI(filePathToBackup)).on('response', function(res) {
+            client.head(encodeURI(filePathToBackup)).on('response', function (res) {
                 // console.log("etag", res.headers.etag);
                 etag = res.headers.etag;
                 callback(null, 'remote etag head request');
@@ -37,7 +37,7 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
             }).end();
         },
 
-        function(callback) {
+        function (callback) {
             // console.log('START uploader... md5 is ', md5, ' etag is ', etag);
             if ('"' + md5 + '"' === etag) {
                 //file already uploaded
@@ -53,20 +53,20 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
 
             // upload a file to s3
             var uploader = client.upload(filePathToBackup, encodeURI(filePathToBackup));
-            uploader.on('error', function(err) {
+            uploader.on('error', function (err) {
                 console.error("unable to upload:", err.stack);
                 callback('unable to uplaod ' + filePathToBackup + ' due to ' + err.stack, ERROR_STOP);
             });
-            uploader.on('progress', function(amountDone, amountTotal) {
+            uploader.on('progress', function (amountDone, amountTotal) {
                 console.log("progress: ", Math.round(Number((amountDone/amountTotal) * 100)), "%");
                 //process.stdout.write(''+Math.round(Number((amountDone/amountTotal) * 100))+', ');
             });
-            uploader.on('end', function(url) {
+            uploader.on('end', function (url) {
                 // console.log("file available at", url);
                 callback(null, SUCCESS_UPLOAD);
             });
         }],
-        function(err, results) {
+        function (err, results) {
             if (err) {
                 console.log("error: ", err);
                 console.log("steps run: ", results);
@@ -88,10 +88,10 @@ function md5calc(fileStream, callback) {
     // console.log('START md5 calc');
     var md5sum = crypto.createHash('md5');
     var s = fileStream;
-    s.on('data', function(d) {
+    s.on('data', function (d) {
         md5sum.update(d);
     });
-    s.on('end', function() {
+    s.on('end', function () {
         md5 = md5sum.digest('hex');
         callback(null, md5);
     });
