@@ -24,7 +24,17 @@ Backup a file to S3, but only if it has changed or has not been uploaded before.
 
 Just use unix "find" command and pipe to heirloom
 
-        $ find /Users/brian/Pictures -name "*.jpg" -exec heirloom --bucket myS3bucketname --input \{\} \;
+Find *.jpg (case insensitive)
+
+        $ find /Users/brian/Pictures -iname "*.jpg" -exec heirloom --bucket myS3bucketname --input \{\} \;
+
+Find by multiple extensions (case insensitive)
+
+        $ find /Users/brian/Pictures -iname "*.jpg" -o -iname "*.mov" -o -iname "*.jpeg" -o -iname "*.gif" -o -iname "*.png" -exec heirloom --bucket myS3bucketname --input \{\} \;
+
+Find all files in the folder
+
+        $ find /Users/brian/Pictures -exec heirloom --bucket myS3bucketname --input \{\} \;
         
 Note that you should use an absolute path for "find" so that it includes an absolute path in the results.
 
