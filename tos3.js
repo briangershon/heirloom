@@ -1,3 +1,5 @@
+// 'toS3' module
+
 var ALREADY_EXISTS = 'file already exists on remote',
     SUCCESS_UPLOAD = 'file uploaded',
     ERROR_STOP = 'an error occurred';
@@ -97,14 +99,18 @@ function upload (filePathToBackup, awsBucket, awsAccessKey, awsSecretKey) {
         }
         return -1;
     }
-
-    function encodeURI (path) {
-        var newPath = path;
-        if (path.charAt(0) === '/') {
-            newPath = path.slice(1);
-        }
-        return encodeURIComponent(newPath);
-    }    
 }
 
+function encodeURI (path) {
+    var newPath = path;
+    if (path.charAt(0) === '/') {
+        newPath = path.slice(1);
+    }
+    return encodeURIComponent(newPath);
+}
+
+// main exports
 exports.upload = upload;
+
+//helper functions exported for testing
+exports.encodeURI = encodeURI;
