@@ -55,7 +55,7 @@ describe('toS3', function () {
     });
 
 
-    describe('#etagLookup', function () {
+    describe('#etagLookup (file exists)', function () {
         var etag,
             client = {},
             filePathToBackup = '',
@@ -86,8 +86,80 @@ describe('toS3', function () {
         });
     });
 
+    describe('#etagLookup (file not on S3)', function () {
+        var etag,
+            client = {},
+            filePathToBackup = '',
+            e = new events.EventEmitter;
+
+        e.end = function () {};
+
+        client.head = function () {
+            return e;
+        };
+
+        beforeEach(function (done) {
+            toS3.etagLookup(client, filePathToBackup, function (err, result) {
+                etag = result;
+                done();
+            });
+
+            var res = {
+                headers: {
+                    etag: undefined
+                }
+            };
+            e.emit('response', res);
+        });
+
+        it('should return a non-null result (so searchStringInArray() does not explode)', function () {
+            var NO_ETAG = 'files not found on S3 so no etag';
+            expect(etag).to.equal(NO_ETAG);
+        });
+    });
+
+    describe('#hashesAreTheSame', function () {
+        it('should be true', function () {
+            var md5 = 'abc',
+                etag = '"abc"';
+            expect(toS3.hashesAreTheSame(md5, etag)).to.equal(true);
+        });
+        it('should be false if etag does not include double quotes as part of the string', function () {
+            var md5 = 'abc',
+                etag = 'abc';
+            expect(toS3.hashesAreTheSame(md5, etag)).to.equal(false);
+        });
+    });
 
 
+    describe('#uploadFile', function () {
+        var message,
+            errMessage,
+            client = {},
+            filePathToBackup = '',
+            e = new events.EventEmitter;
+
+        // e.end = function () {};
+
+        client.upload = function () {
+            return e;
+        };
+
+        beforeEach(function (done) {
+            toS3.uploadFile(client, filePathToBackup, function (err, result) {
+                errMessage = err;
+                message = result;
+                done();
+            });
+
+            e.emit('end');
+        });
+
+        it('should trigger message when file upload finishes', function () {
+            var SUCCESS_UPLOAD = 'file uploaded';
+            expect(message).to.equal(SUCCESS_UPLOAD);
+        });
+    });
 
 });
 
