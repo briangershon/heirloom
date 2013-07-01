@@ -18,23 +18,16 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
 
     async.series([
         function (callback) {
-            md5calc(fileStream, callback);
+            md5Calc(fileStream, callback);
         }, 
 
         function (callback) {
-            // console.log('START remote etag head request');
             var client = knox.createClient({
                 key: awsAccessKey,
                 secret: awsSecretKey,
                 bucket: awsBucket
             });
-            client.head(encodeURI(filePathToBackup)).on('response', function (res) {
-                // console.log("etag", res.headers.etag);
-                etag = res.headers.etag;
-                callback(null, 'remote etag head request');
-            }).on('error', function (err) {
-                callback("When checking remote file's etag, this error occurred: " + err + ". Not connected to internet?", ERROR_STOP);
-            }).end();
+            etagLookup(client, filePathToBackup, callback);
         },
 
         function (callback) {
@@ -84,7 +77,7 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
     );
 }
 
-function md5calc(fileStream, callback) {
+function md5Calc(fileStream, callback) {
     // console.log('START md5 calc');
     var md5sum = crypto.createHash('md5');
     var s = fileStream;
@@ -95,6 +88,20 @@ function md5calc(fileStream, callback) {
         md5 = md5sum.digest('hex');
         callback(null, md5);
     });
+}
+
+function etagLookup(client, filePathToBackup, callback) {
+    // console.log('START remote etag head request');
+    client.head(encodeURI(filePathToBackup))
+    .on('response', function (res) {
+        // console.log("etag", res.headers.etag);
+        etag = res.headers.etag;
+        callback(null, etag);
+    })
+    .on('error', function (err) {
+        callback("When checking remote file's etag, this error occurred: " + err + ". Not connected to internet?", ERROR_STOP);
+    })
+    .end();
 }
 
 function searchStringInArray (str, strArray) {
@@ -118,4 +125,5 @@ exports.upload = upload;
 //helper functions exported for testing
 exports.encodeURI = encodeURI;
 exports.searchStringInArray = searchStringInArray;
-exports.md5calc = md5calc;
+exports.md5Calc = md5Calc;
+exports.etagLookup = etagLookup;

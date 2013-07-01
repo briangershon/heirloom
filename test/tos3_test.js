@@ -2,7 +2,8 @@
 
 var expect = require('chai').expect;
 var toS3 = require('../tos3'),
-    Stream = require('stream');
+    stream = require('stream'),
+    events = require('events');
 
 describe('toS3', function () {
     describe('#encodeURI', function () {
@@ -33,13 +34,13 @@ describe('toS3', function () {
         });
     });
 
-    describe('#md5calc', function () {
+    describe('#md5Calc', function () {
         var md5;
 
         beforeEach(function (done) {
-            var fileStream = new Stream();
+            var fileStream = new stream();
 
-            toS3.md5calc(fileStream, function (err, result) {
+            toS3.md5Calc(fileStream, function (err, result) {
                 md5 = result;
                 done();
             });
@@ -50,6 +51,38 @@ describe('toS3', function () {
 
         it('should calc proper MD5', function () {
             expect(md5).to.equal('6363f0d465541022f9b743c2f745b493');
+        });
+    });
+
+
+    describe('#etagLookup', function () {
+        var etag,
+            client = {},
+            filePathToBackup = '',
+            e = new events.EventEmitter;
+
+        e.end = function () {};
+
+        client.head = function () {
+            return e;
+        };
+
+        beforeEach(function (done) {
+            toS3.etagLookup(client, filePathToBackup, function (err, result) {
+                etag = result;
+                done();
+            });
+
+            var res = {
+                headers: {
+                    etag: '6363f0d465541022f9b743c2f745b493'
+                }
+            };
+            e.emit('response', res);
+        });
+
+        it('should calc proper MD5', function () {
+            expect(etag).to.equal('6363f0d465541022f9b743c2f745b493');
         });
     });
 
