@@ -118,26 +118,27 @@ describe('toS3', function () {
             filePathToBackup = '',
             e = new events.EventEmitter;
 
-        // e.end = function () {};
-
         client.upload = function () {
             return e;
         };
 
-        beforeEach(function (done) {
-            toS3.uploadFile(client, filePathToBackup, function (err, result) {
-                errMessage = err;
-                message = result;
-                done();
-            });
+        it('should trigger message when file upload finishes', function (done) {
+            var SUCCESS_UPLOAD = 'file uploaded';
+            
+            var promise = toS3.uploadFile(client, filePathToBackup);
+            expect(promise).to.eventually.deep.equal({
+                message: SUCCESS_UPLOAD
+            }).and.notify(done);
 
             e.emit('end');
         });
-
-        it('should trigger message when file upload finishes', function () {
-            var SUCCESS_UPLOAD = 'file uploaded';
-            expect(message).to.equal(SUCCESS_UPLOAD);
+        
+        it('should trigger error message if file not uploaded successfully', function (done) {
+            var promise = toS3.uploadFile(client, filePathToBackup);
+            expect(promise).to.be.rejected.with('unable to upload  due to some error').and.notify(done);
+            e.emit('error', 'some error');
         });
+        
     });
 
 });
