@@ -34,7 +34,7 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
             md5 = results[0].md5;
             etag = results[1].etag;
             if (hashesAreTheSame(md5, etag)) {
-                return Q('file already uploaded');
+                return Q({message: 'file already uploaded'});
             } else {
                 var client = s3.createClient({
                     key: awsAccessKey,
