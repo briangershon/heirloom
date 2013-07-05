@@ -1,6 +1,11 @@
 // test/tos3.js
 
-var expect = require('chai').expect;
+var chai = require("chai"),
+    expect = chai.expect,
+    chaiAsPromised = require("chai-as-promised");
+
+chai.use(chaiAsPromised);;
+
 var toS3 = require('../tos3'),
     stream = require('stream'),
     events = require('events');
@@ -35,27 +40,20 @@ describe('toS3', function () {
     });
 
     describe('#md5Calc', function () {
-        var md5;
-
-        beforeEach(function (done) {
+        it('should calc proper MD5', function (done) {
             var fileStream = new stream();
-
-            toS3.md5Calc(fileStream, function (err, result) {
-                md5 = result;
-                done();
-            });
+            
+            var promise = toS3.md5Calc(fileStream);
+            expect(promise).to.eventually.deep.equal({
+                md5: '6363f0d465541022f9b743c2f745b493'
+            }).and.notify(done);
 
             fileStream.emit('data', 'this is my string');
             fileStream.emit('end');
         });
-
-        it('should calc proper MD5', function () {
-            expect(md5).to.equal('6363f0d465541022f9b743c2f745b493');
-        });
     });
 
-
-    describe('#etagLookup (file exists)', function () {
+    describe('#etagLookup', function () {
         var etag,
             client = {},
             filePathToBackup = '',
@@ -67,55 +65,36 @@ describe('toS3', function () {
             return e;
         };
 
-        beforeEach(function (done) {
-            toS3.etagLookup(client, filePathToBackup, function (err, result) {
-                etag = result;
-                done();
-            });
-
+        it('should return an etag (if file exists)', function (done) {
             var res = {
                 headers: {
                     etag: '6363f0d465541022f9b743c2f745b493'
                 }
             };
+
+            var promise = toS3.etagLookup(client, filePathToBackup);
+            expect(promise).to.eventually.deep.equal({
+                etag: '6363f0d465541022f9b743c2f745b493'
+            }).and.notify(done);
+
             e.emit('response', res);
         });
-
-        it('should calc proper MD5', function () {
-            expect(etag).to.equal('6363f0d465541022f9b743c2f745b493');
-        });
-    });
-
-    describe('#etagLookup (file not on S3)', function () {
-        var etag,
-            client = {},
-            filePathToBackup = '',
-            e = new events.EventEmitter;
-
-        e.end = function () {};
-
-        client.head = function () {
-            return e;
-        };
-
-        beforeEach(function (done) {
-            toS3.etagLookup(client, filePathToBackup, function (err, result) {
-                etag = result;
-                done();
-            });
-
+        
+        it('should return an empty etag (if file does not exist)', function (done) {
             var res = {
                 headers: {
                     etag: undefined
                 }
             };
+
+            var promise = toS3.etagLookup(client, filePathToBackup);
+            expect(promise).to.eventually.deep.equal({
+                etag: ''
+            }).and.notify(done);
+
             e.emit('response', res);
         });
-
-        it('should return a non-null result (so searchStringInArray() does not explode)', function () {
-            var NO_ETAG = 'files not found on S3 so no etag';
-            expect(etag).to.equal(NO_ETAG);
-        });
+        
     });
 
     describe('#hashesAreTheSame', function () {

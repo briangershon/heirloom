@@ -16,7 +16,7 @@
   },
   "author": {
     "name": "Brian Gershon",
-    "url": "http://http://blog.evolvingbits.com/"
+    "url": "http://blog.evolvingbits.com/"
   },
   "license": [
     {
@@ -27,12 +27,13 @@
   "dependencies": {
     "knox": "~0.8.3",
     "s3": "~0.3.0",
-    "async": "~0.2.9",
+    "q": "",
     "optimist": ""
   },
   "devDependencies": {
     "mocha": "",
-    "chai": ""
+    "chai": "",
+    "chai-as-promised": ""
   },
   "engines": {
     "node": ">=0.6.21"

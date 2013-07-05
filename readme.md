@@ -42,5 +42,5 @@ Find all files in the folder
         
 Note that you should use an absolute path for "find" so that it includes an absolute path in the results.
 
-The filename and path is used for the full name on S3.
+The filename and path are used for the full name on S3.
         

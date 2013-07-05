@@ -2,99 +2,117 @@
 
 var ALREADY_EXISTS = 'file already exists on remote',
     SUCCESS_UPLOAD = 'file uploaded',
-    ERROR_STOP = 'an error occurred',
-    NO_ETAG = 'files not found on S3 so no etag';
+    ERROR_STOP = 'an error occurred';
 
 var s3 = require('s3'),
     knox = require('knox'),
     crypto = require('crypto'),
-    async = require('async');
+    Q = require('q');
 
 // TODO: Remove these global variables and use async.waterfall and pass them as parameters to next step
 var md5, etag;
 
 function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
 
-    console.log('Processing ' + filePathToBackup);
-
-    async.series([
-        function (callback) {
-            md5Calc(fileStream, callback);
-        }, 
-
-        function (callback) {
-            var client = knox.createClient({
-                key: awsAccessKey,
-                secret: awsSecretKey,
-                bucket: awsBucket
-            });
-            etagLookup(client, filePathToBackup, callback);
-        },
-
-        function (callback) {
-            // console.log('START uploader... md5 is ', md5, ' etag is ', etag);
-            // TODO: Unit test path if hashes are NOT the same
-            if (hashesAreTheSame(md5, etag)) {
-                //file already uploaded
-                callback(null, ALREADY_EXISTS);
-                return;
-            }
-
-            var client = s3.createClient({
-                key: awsAccessKey,
-                secret: awsSecretKey,
-                bucket: awsBucket
-            });
-
-            // upload a file to s3
-            uploadFile(client, filePathToBackup, callback);
-        }],
-        function (err, results) {
-            if (err) {
-                console.log("error: ", err);
-                console.log("steps run: ", results);
-                process.exit(1);
-            }
-            // console.log("steps run: ", results);
-            if (searchStringInArray(ALREADY_EXISTS, results) > -1) {
-                console.log('...skipping, already uploaded.');
-            }
-            if (searchStringInArray(SUCCESS_UPLOAD, results) > -1) {
-                console.log('...uploaded successfully.');
-            }
-            process.exit(0);
+    return start(filePathToBackup)
+    .then(function (filePathToBackup) {
+        console.log('Processing ' + filePathToBackup);
+        return md5Calc(fileStream);
+    })
+    .then(function (results) {
+        console.log(results);
+        var client = knox.createClient({
+            key: awsAccessKey,
+            secret: awsSecretKey,
+            bucket: awsBucket
+        });
+        return etagLookup(client, filePathToBackup);
+    })
+    .then(function (results) {
+        console.log(results);   // should have etag parameter
+        
+        // TODO: Move these first two steps into a Q.all() so they both need to complete
+        //  to get results and compare the two to see if next step should happen.
+        
+/*
+        // console.log('START uploader... md5 is ', md5, ' etag is ', etag);
+        // TODO: Unit test path if hashes are NOT the same
+        if (hashesAreTheSame(md5, etag)) {
+            //file already uploaded
+            callback(null, ALREADY_EXISTS);
+            return;
         }
-    );
+    
+        var client = s3.createClient({
+            key: awsAccessKey,
+            secret: awsSecretKey,
+            bucket: awsBucket
+        });
+    
+        // upload a file to s3
+        return uploadFile(client, filePathToBackup, callback);
+*/
+    })
+    // .then(function () {
+    //     // console.log("steps run: ", results);
+    //     if (searchStringInArray(ALREADY_EXISTS, results) > -1) {
+    //         console.log('...skipping, already uploaded.');
+    //     }
+    //     if (searchStringInArray(SUCCESS_UPLOAD, results) > -1) {
+    //         console.log('...uploaded successfully.');
+    //     }
+    //     process.exit(0);
+    // })
+    .catch(function (error) {
+        console.log('CATCH ERROR > ', error);
+        // console.log("steps run: ", results);
+        process.exit(1);
+    })
+    .done();
 }
 
-function md5Calc (fileStream, callback) {
+function start (filepath) {
+    return Q.fcall(function () {
+        return filepath;
+    });
+};
+
+function md5Calc (fileStream) {
     // console.log('START md5 calc');
+    var deferred = Q.defer();
     var md5sum = crypto.createHash('md5');
     var s = fileStream;
     s.on('data', function (d) {
         md5sum.update(d);
     });
+    s.on('error', function (e) {
+        deferred.reject(new Error(e));
+    });
     s.on('end', function () {
         md5 = md5sum.digest('hex');
-        callback(null, md5);
+        deferred.resolve({md5: md5});
     });
+    return deferred.promise;
 }
 
 function etagLookup (client, filePathToBackup, callback) {
     // console.log('START remote etag head request');
+    var deferred = Q.defer();
     client.head(encodeURI(filePathToBackup))
     .on('response', function (res) {
         etag = res.headers.etag;
         if (etag) {
-            callback(null, etag);
+            deferred.resolve({etag: etag});
         } else {
-            callback(null, NO_ETAG);
+            deferred.resolve({etag: ''});
         }
     })
     .on('error', function (err) {
-        callback("When checking remote file's etag, this error occurred: " + err + ". Not connected to internet?", ERROR_STOP);
+        deferred.reject(new Error("When checking remote file's etag, this error occurred: " + err + ". Not connected to internet?"));
     })
     .end();
+    
+    return deferred.promise;
 }
 
 function uploadFile (client, filePathToBackup, callback) {
