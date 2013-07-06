@@ -8,9 +8,9 @@ var s3 = require('s3'),
     crypto = require('crypto'),
     Q = require('q');
 
-function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
+exports.upload = function (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
 
-    return start(filePathToBackup)
+    return exports.start(filePathToBackup)
     .then(function (filePathToBackup) {
         console.log('Processing ' + filePathToBackup);
 
@@ -21,33 +21,20 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
         });
         
         return Q.all([
-            md5Calc(fileStream),
-            etagLookup(client, filePathToBackup)
+            exports.md5Calc(fileStream),
+            exports.etagLookup(client, filePathToBackup)
         ]);
     })
     .then(function (results) {
-        // console.log(results);
-        var md5,
-            etag;
-            
-        if (results.length === 2 && results[0].md5 && typeof results[0].md5 === 'string' && results[0].md5.length > 0) {
-            md5 = results[0].md5;
-            etag = results[1].etag;
-            if (hashesAreTheSame(md5, etag)) {
-                return Q({message: 'file already uploaded'});
-            } else {
-                var client = s3.createClient({
-                    key: awsAccessKey,
-                    secret: awsSecretKey,
-                    bucket: awsBucket
-                });
-                // upload a file to s3
-                console.log('uploading file to S3');
-                return uploadFile(client, filePathToBackup);
-            }
-        } else {
-            return Q.reject(new Error('results not expected'));
-        }
+        /*
+        
+        returns promise.
+
+        results = [ { md5: '095ccfae4084dc5133efb77efe851926' },
+          { etag: '095ccfae4084dc5133efb77efe851926' } ]
+
+         */
+        return exports.uploadIfNotAlreadyOnS3(results, awsAccessKey, awsSecretKey, awsBucket, filePathToBackup);
     })
     .then(function (results) {
         console.log(results);
@@ -69,13 +56,12 @@ function upload (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecre
     .done();
 }
 
-function start (filepath) {
-    return Q.fcall(function () {
-        return filepath;
-    });
+exports.start = function (filepath) {
+    // turn value into a promise
+    return Q(filepath);
 };
 
-function md5Calc (fileStream) {
+exports.md5Calc = function (fileStream) {
     // console.log('START md5 calc');
     var deferred = Q.defer();
     var md5sum = crypto.createHash('md5');
@@ -93,13 +79,16 @@ function md5Calc (fileStream) {
     return deferred.promise;
 }
 
-function etagLookup (client, filePathToBackup, callback) {
+exports.etagLookup = function (client, filePathToBackup) {
     // console.log('START remote etag head request');
     var deferred = Q.defer();
-    client.head(encodeURI(filePathToBackup))
+    client.head(exports.encodeURI(filePathToBackup))
     .on('response', function (res) {
         etag = res.headers.etag;
-        if (etag) {
+        if (typeof etag === 'string' && etag.length > 0) {
+            
+            // Strip of doublequote that knox Client.head() returns around the etag string
+            etag = etag.replace(/"/g, '');
             deferred.resolve({etag: etag});
         } else {
             deferred.resolve({etag: ''});
@@ -113,11 +102,11 @@ function etagLookup (client, filePathToBackup, callback) {
     return deferred.promise;
 }
 
-function uploadFile (client, filePathToBackup) {
+exports.uploadFile = function (client, filePathToBackup) {
     var deferred = Q.defer();
     var uploader = client.upload(filePathToBackup, encodeURI(filePathToBackup));
     uploader.on('error', function (err) {
-        console.error("unable to upload:", err);
+        // console.error("unable to upload:", err);
         deferred.reject(new Error('unable to upload ' + filePathToBackup + ' due to ' + err));
     });
     uploader.on('progress', function (amountDone, amountTotal) {
@@ -132,14 +121,14 @@ function uploadFile (client, filePathToBackup) {
     return deferred.promise;
 }
 
-function searchStringInArray (str, strArray) {
+exports.searchStringInArray = function (str, strArray) {
     for (var j=0; j<strArray.length; j++) {
         if (strArray[j].match(str)) return j;
     }
     return -1;
 }
 
-function encodeURI (path) {
+exports.encodeURI = function (path) {
     var newPath = path;
     if (path.charAt(0) === '/') {
         newPath = path.slice(1);
@@ -147,21 +136,36 @@ function encodeURI (path) {
     return encodeURIComponent(newPath);
 }
 
-function hashesAreTheSame (md5, etag) {
-    // NOTE: knox Client.head() returns etag as a string that contains beginning/end double quotes
-    if ('"' + md5 + '"' === etag) {
+exports.hashesAreTheSame = function (md5, etag) {
+    if (md5 === etag) {
         return true;
     }
     return false;
 }
 
-// main exports
-exports.upload = upload;
+exports.createS3Client = function (awsAccessKey, awsSecretKey, awsBucket) {
+    return s3.createClient({
+        key: awsAccessKey,
+        secret: awsSecretKey,
+        bucket: awsBucket
+    });
+}
 
-//helper functions exported for testing
-exports.encodeURI = encodeURI;
-exports.searchStringInArray = searchStringInArray;
-exports.md5Calc = md5Calc;
-exports.etagLookup = etagLookup;
-exports.hashesAreTheSame = hashesAreTheSame;
-exports.uploadFile = uploadFile;
+exports.uploadIfNotAlreadyOnS3 = function (arrayMD5AndEtag, awsAccessKey, awsSecretKey, awsBucket, filePathToBackup) {
+    var md5,
+        etag;
+
+    if (arrayMD5AndEtag && arrayMD5AndEtag.length === 2 && typeof arrayMD5AndEtag[0].md5 === 'string' && arrayMD5AndEtag[0].md5.length > 0) {
+        md5 = arrayMD5AndEtag[0].md5;
+        etag = arrayMD5AndEtag[1].etag;
+        if (exports.hashesAreTheSame(md5, etag)) {
+            return Q({message: 'file already uploaded'});
+        } else {
+            var client = exports.createS3Client(awsAccessKey, awsSecretKey, awsBucket);
+            // upload a file to s3
+            return exports.uploadFile(client, filePathToBackup);
+        }
+    } else {
+        return Q.reject(new Error('results not expected'));
+    }
+}
