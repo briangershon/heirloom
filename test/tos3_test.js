@@ -3,7 +3,8 @@
 var chai = require("chai"),
     expect = chai.expect,
     chaiAsPromised = require("chai-as-promised"),
-    sinon = require("sinon");
+    sinon = require("sinon"),
+    path = require('path');
 
 chai.use(chaiAsPromised);;
 
@@ -223,6 +224,60 @@ describe('toS3', function () {
         });
     });
 
+    describe('#stripPath', function () {
+        it('should return same input and output path if no numberOfPathPartsToStrip parameter', function () {
+            var inputPath = ['Users', 'Brian', 'Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            inputPath = [path.sep, inputPath].join('');
+            var results = toS3.stripPath(inputPath)
+            expect(results.input).to.equal(inputPath);
+            expect(results.output).to.equal(inputPath);
+        });
+
+        it('should return new output path if numberOfPathPartsToStrip == 1', function () {
+            var inputPath = ['Users', 'Brian', 'Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            inputPath = [path.sep, inputPath].join('');
+            var outputPathExpected = ['Brian', 'Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            outputPathExpected = [path.sep, outputPathExpected].join('');
+
+            var results = toS3.stripPath(inputPath, 1);
+            expect(results.input).to.equal(inputPath);
+            expect(results.output).to.equal(outputPathExpected);
+        });
+
+        it('should return new output path if numberOfPathPartsToStrip == 2', function () {
+            var inputPath = ['Users', 'Brian', 'Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            inputPath = [path.sep, inputPath].join('');
+            var outputPathExpected = ['Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            outputPathExpected = [path.sep, outputPathExpected].join('');
+
+            var results = toS3.stripPath(inputPath, 2);
+            expect(results.input).to.equal(inputPath);
+            expect(results.output).to.equal(outputPathExpected);
+        });
+
+        it('should return just filename if numberOfPathPartsToStrip is same as the number of parts in the path', function () {
+            var inputPath = ['Users', 'Brian', 'Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            inputPath = [path.sep, inputPath].join('');
+            var outputPathExpected = "filename.jpg";
+            outputPathExpected = [path.sep, outputPathExpected].join('');
+
+            var results = toS3.stripPath(inputPath, 3);
+            expect(results.input).to.equal(inputPath);
+            expect(results.output).to.equal(outputPathExpected);
+        });
+
+        it('should return just filename if numberOfPathPartsToStrip longer than the number of parts in the path', function () {
+            var inputPath = ['Users', 'Brian', 'Pictures'].join(path.sep) + path.sep + "filename.jpg";
+            inputPath = [path.sep, inputPath].join('');
+            var outputPathExpected = "filename.jpg";
+            outputPathExpected = [path.sep, outputPathExpected].join('');
+
+            var results = toS3.stripPath(inputPath, 4);
+            expect(results.input).to.equal(inputPath);
+            expect(results.output).to.equal(outputPathExpected);
+        });
+
+    });
 });
 
 

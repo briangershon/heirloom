@@ -6,9 +6,10 @@ var ALREADY_EXISTS = 'file already exists on remote',
 var s3 = require('s3'),
     knox = require('knox'),
     crypto = require('crypto'),
-    Q = require('q');
+    Q = require('q'),
+    path = require('path');
 
-exports.upload = function (filePathToBackup, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
+exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
 
     return exports.start(filePathToBackup)
     .then(function (filePathToBackup) {
@@ -102,9 +103,38 @@ exports.etagLookup = function (client, filePathToBackup) {
     return deferred.promise;
 }
 
-exports.uploadFile = function (client, filePathToBackup) {
-    var deferred = Q.defer();
-    var uploader = client.upload(filePathToBackup, encodeURI(filePathToBackup));
+// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
+function isNumber(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+// returns an object with an input and output key
+exports.stripPath = function (filePathToBackup, numberOfPathPartsToStrip) {
+    var basename = path.basename(filePathToBackup),
+        input = filePathToBackup,
+        output;
+
+    if (numberOfPathPartsToStrip && isNumber(numberOfPathPartsToStrip)) {
+        var newPathArray = path.dirname(filePathToBackup).split(path.sep),
+            slicedPathArray = newPathArray.slice(numberOfPathPartsToStrip + 1); // skip leading / in array
+        slicedPathArray.unshift('');    // add back leading /
+        output = slicedPathArray.join(path.sep) + path.sep + basename;
+    } else {
+        output = input;
+    }
+
+    // console.log(input, output);
+    return { input: input, output: output };
+}
+
+exports.uploadFile = function (client, filePathToBackup, numberOfPathPartsToStrip) {
+    var deferred = Q.defer(),
+        newPath = exports.stripPath(filePathToBackup, numberOfPathPartsToStrip),
+        inputPath = newPath.input,
+        outputPath = newPath.output;
+
+    var uploader = client.upload(inputPath, encodeURI(outputPath));
+
     uploader.on('error', function (err) {
         // console.error("unable to upload:", err);
         deferred.reject(new Error('unable to upload ' + filePathToBackup + ' due to ' + err));
