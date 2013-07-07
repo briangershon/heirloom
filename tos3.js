@@ -9,9 +9,9 @@ var s3 = require('s3'),
     Q = require('q'),
     path = require('path');
 
-exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
+exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, prependText, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
 
-    return exports.setInputOutputPaths(filePathToBackup, numberOfPathPartsToStrip)
+    return exports.setInputOutputPaths(filePathToBackup, numberOfPathPartsToStrip, prependText)
     .then(function (results) {
         var inputPath = results.inputPath,
             outputPath = results.outputPath;
@@ -62,13 +62,15 @@ exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStrea
     .done();
 };
 
-exports.setInputOutputPaths = function (filepath, numberOfPathPartsToStrip) {
-    // turn value into a promise
-    
+exports.setInputOutputPaths = function (filepath, numberOfPathPartsToStrip, prependText) {
     newPath = exports.stripPath(filepath, numberOfPathPartsToStrip),
     inputPath = newPath.input,
     outputPath = newPath.output;
-    
+
+    if (prependText && typeof prependText === 'string' && prependText.length > 0) {
+        outputPath = [prependText, outputPath].join('');
+    }
+
     return Q({inputPath: inputPath, outputPath: outputPath});
 };
 

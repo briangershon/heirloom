@@ -17,6 +17,10 @@ var argv = require('optimist')
         alias : 'strip'
     })
     .describe('s', 'Strip out first n segments of the path when creating output path on S3')
+    .options('p', {
+        alias : 'prepend'
+    })
+    .describe('p', 'Prepend absolute path to S3 output path. Use with --strip to remove unneeded initial path segments.')
     .demand(['i', 'b'])
     .argv
 ;
@@ -25,11 +29,12 @@ var filePathToBackup = argv.i,
     awsAccessKey = process.env.AWS_ACCESS_KEY_ID,
     awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY,
     awsBucket = argv.b,
-    numberOfPathPartsToStrip = argv.s;
+    numberOfPathPartsToStrip = argv.s,
+    prependText = argv.p;
     
 if (!awsAccessKey || !awsSecretKey) {
     console.log('Missing AWS Credentails.  You need two environment variables defined: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
     process.exit(1);
 }
 
-toS3.upload(filePathToBackup, numberOfPathPartsToStrip, fs.ReadStream(filePathToBackup), awsBucket, awsAccessKey, awsSecretKey);
+toS3.upload(filePathToBackup, numberOfPathPartsToStrip, prependText, fs.ReadStream(filePathToBackup), awsBucket, awsAccessKey, awsSecretKey);

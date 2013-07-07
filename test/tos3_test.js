@@ -55,6 +55,20 @@ describe('toS3', function () {
                 outputPath: outputPath
             }).and.notify(done);
         });
+
+        it('should prepend path if prependText is set and --strip is set', function (done) {
+            var filePathToBackup = '/Users/brian/Pictures/bombshell.jpg',
+                numberOfPathPartsToStrip = 2,
+                prependText = '/SomewhereElse',
+                outputPath = '/SomewhereElse/Pictures/bombshell.jpg';
+
+            var promise = toS3.setInputOutputPaths(filePathToBackup, numberOfPathPartsToStrip, prependText);
+
+            expect(promise).to.eventually.deep.equal({
+                inputPath: filePathToBackup,
+                outputPath: outputPath
+            }).and.notify(done);
+        });
     });
 
     describe('#md5Calc', function () {
@@ -295,6 +309,7 @@ describe('toS3', function () {
         });
 
     });
+
 });
 
 
