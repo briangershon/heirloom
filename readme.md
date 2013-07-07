@@ -24,6 +24,11 @@ Backup a file to S3, but only if it has changed or has not been uploaded before.
 
         $ heirloom --bucket myS3bucketname --input /Users/brian/Pictures/CA_1920x1080_05.jpg
 
+### Copy one file to 'mybucketname' on S3 but strip off 2 levels of the path.
+
+        # save to S3 as /Pictures/CA_1920x1080_05.jpg
+        $ heirloom --bucket myS3bucketname --input /Users/brian/Pictures/CA_1920x1080_05.jpg --strip 2
+
 ### Want to copy all your .jpg images in your Pictures folder?
 
 Just use unix "find" command and pipe to heirloom

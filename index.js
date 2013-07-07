@@ -16,7 +16,7 @@ var argv = require('optimist')
     .options('s', {
         alias : 'strip'
     })
-    .describe('s', 'Strip out n parts of the path when creating output path on S3')
+    .describe('s', 'Strip out first n segments of the path when creating output path on S3')
     .demand(['i', 'b'])
     .argv
 ;
