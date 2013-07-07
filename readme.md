@@ -44,6 +44,8 @@ Find *.jpg (case insensitive)
 
 Find by multiple extensions (case insensitive)
 
+        # IN THEORY THIS SHOULD WORK DOES NOT. ONLY FINDING *.png FILES AND NO OTHERS. NOT SURE WHY.
+        # SO INSTEAD I RUN A BASH SCRIPT THAT RUNS THIS COMMAND SEPARATELY FOR EACH EXTENSION.
         $ find /Users/brian/Pictures -iname "*.jpg" -o -iname "*.mov" -o -iname "*.jpeg" -o -iname "*.gif" -o -iname "*.png" -exec heirloom --bucket myS3bucketname --input \{\} \;
 
 Find all files in the folder
