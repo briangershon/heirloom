@@ -41,6 +41,21 @@ describe('toS3', function () {
             expect(result).to.equal(-1)
         });
     });
+    
+    describe('#setInputOutputPaths', function () {
+        it('should return promise with an inputPath and outputPath hash', function (done) {
+            var filePathToBackup = '/Users/brian/Pictures/bombshell.jpg',
+                numberOfPathPartsToStrip = 2,
+                outputPath = '/Pictures/bombshell.jpg';
+
+            var promise = toS3.setInputOutputPaths(filePathToBackup, numberOfPathPartsToStrip);
+            
+            expect(promise).to.eventually.deep.equal({
+                inputPath: filePathToBackup,
+                outputPath: outputPath
+            }).and.notify(done);
+        });
+    });
 
     describe('#md5Calc', function () {
         it('should calc proper MD5', function (done) {
@@ -157,8 +172,10 @@ describe('toS3', function () {
         });
 
         it('should trigger error message if file not uploaded successfully', function (done) {
-            var promise = toS3.uploadFile(client, filePathToBackup);
-            expect(promise).to.be.rejected.with('unable to upload  due to some error').and.notify(done);
+            var inputPath = '/User/brian/hello.jpg',
+                outputPath = '';
+            var promise = toS3.uploadFile(client, inputPath, outputPath);
+            expect(promise).to.be.rejected.with('unable to upload /User/brian/hello.jpg due to some error').and.notify(done);
             e.emit('error', 'some error');
         });
         
@@ -194,8 +211,8 @@ describe('toS3', function () {
         
         describe('promise (file already uploaded)', function () {
             it('should return message if file already uploaded', function (done) {
-                var arrayMD5AndEtag = [{md5: 'xxx'}, {etag: 'xxx'}];
-                var promise = toS3.uploadIfNotAlreadyOnS3(arrayMD5AndEtag);
+                var results = [{md5: 'xxx'}, {etag: 'xxx'}, {inputPath: '', outputPath: ''}];
+                var promise = toS3.uploadIfNotAlreadyOnS3(results);
                 expect(promise).to.eventually.deep.equal({
                     message: 'file already uploaded'
                 }).and.notify(done);
@@ -210,12 +227,12 @@ describe('toS3', function () {
                     awsBucket = '333',
                     filePathToBackup = '';
 
-                var arrayMD5AndEtag = [{md5: 'xxx'}, {etag: 'yyy'}];
+                var results = [{md5: 'xxx'}, {etag: 'yyy'}, {inputPath: filePathToBackup, outputPath: ''}];
                 
                 sinon.stub(toS3, 'createS3Client').returns({});
                 sinon.stub(toS3, 'uploadFile').returns(Q({message: SUCCESS_UPLOAD}));
                 
-                var promise = toS3.uploadIfNotAlreadyOnS3(arrayMD5AndEtag, awsAccessKey, awsSecretKey, awsBucket, filePathToBackup);
+                var promise = toS3.uploadIfNotAlreadyOnS3(results, awsAccessKey, awsSecretKey, awsBucket);
                 
                 expect(promise).to.eventually.deep.equal({
                     message: SUCCESS_UPLOAD

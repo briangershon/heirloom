@@ -11,9 +11,12 @@ var s3 = require('s3'),
 
 exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStream, awsBucket, awsAccessKey, awsSecretKey) {
 
-    return exports.start(filePathToBackup)
-    .then(function (filePathToBackup) {
-        console.log('Processing ' + filePathToBackup);
+    return exports.setInputOutputPaths(filePathToBackup, numberOfPathPartsToStrip)
+    .then(function (results) {
+        var inputPath = results.inputPath,
+            outputPath = results.outputPath;
+
+        console.log('About to upload ' + inputPath + ' to S3 as ' + outputPath);
 
         var client = knox.createClient({
             key: awsAccessKey,
@@ -23,7 +26,8 @@ exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStrea
         
         return Q.all([
             exports.md5Calc(fileStream),
-            exports.etagLookup(client, filePathToBackup)
+            exports.etagLookup(client, outputPath),
+            Q({ inputPath: inputPath, outputPath: outputPath })
         ]);
     })
     .then(function (results) {
@@ -32,10 +36,11 @@ exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStrea
         returns promise.
 
         results = [ { md5: '095ccfae4084dc5133efb77efe851926' },
-          { etag: '095ccfae4084dc5133efb77efe851926' } ]
+          { etag: '095ccfae4084dc5133efb77efe851926' }
+          { inputPath: xxx, outputPath: yyy } ]
 
          */
-        return exports.uploadIfNotAlreadyOnS3(results, awsAccessKey, awsSecretKey, awsBucket, filePathToBackup);
+        return exports.uploadIfNotAlreadyOnS3(results, awsAccessKey, awsSecretKey, awsBucket);
     })
     .then(function (results) {
         console.log(results);
@@ -55,11 +60,16 @@ exports.upload = function (filePathToBackup, numberOfPathPartsToStrip, fileStrea
         process.exit(1);
     })
     .done();
-}
+};
 
-exports.start = function (filepath) {
+exports.setInputOutputPaths = function (filepath, numberOfPathPartsToStrip) {
     // turn value into a promise
-    return Q(filepath);
+    
+    newPath = exports.stripPath(filepath, numberOfPathPartsToStrip),
+    inputPath = newPath.input,
+    outputPath = newPath.output;
+    
+    return Q({inputPath: inputPath, outputPath: outputPath});
 };
 
 exports.md5Calc = function (fileStream) {
@@ -78,7 +88,7 @@ exports.md5Calc = function (fileStream) {
         deferred.resolve({md5: md5});
     });
     return deferred.promise;
-}
+};
 
 exports.etagLookup = function (client, filePathToBackup) {
     // console.log('START remote etag head request');
@@ -101,7 +111,7 @@ exports.etagLookup = function (client, filePathToBackup) {
     .end();
     
     return deferred.promise;
-}
+};
 
 // http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
 function isNumber(n) {
@@ -125,19 +135,15 @@ exports.stripPath = function (filePathToBackup, numberOfPathPartsToStrip) {
 
     // console.log(input, output);
     return { input: input, output: output };
-}
+};
 
-exports.uploadFile = function (client, filePathToBackup, numberOfPathPartsToStrip) {
+exports.uploadFile = function (client, inputPath, outputPath) {
     var deferred = Q.defer(),
-        newPath = exports.stripPath(filePathToBackup, numberOfPathPartsToStrip),
-        inputPath = newPath.input,
-        outputPath = newPath.output;
-
-    var uploader = client.upload(inputPath, encodeURI(outputPath));
+        uploader = client.upload(inputPath, encodeURI(outputPath));
 
     uploader.on('error', function (err) {
         // console.error("unable to upload:", err);
-        deferred.reject(new Error('unable to upload ' + filePathToBackup + ' due to ' + err));
+        deferred.reject(new Error('unable to upload ' + inputPath + ' due to ' + err));
     });
     uploader.on('progress', function (amountDone, amountTotal) {
         console.log("progress: ", Math.round(Number((amountDone/amountTotal) * 100)), "%");
@@ -149,14 +155,14 @@ exports.uploadFile = function (client, filePathToBackup, numberOfPathPartsToStri
         deferred.resolve({message: SUCCESS_UPLOAD});
     });
     return deferred.promise;
-}
+};
 
 exports.searchStringInArray = function (str, strArray) {
     for (var j=0; j<strArray.length; j++) {
         if (strArray[j].match(str)) return j;
     }
     return -1;
-}
+};
 
 exports.encodeURI = function (path) {
     var newPath = path;
@@ -164,14 +170,14 @@ exports.encodeURI = function (path) {
         newPath = path.slice(1);
     }
     return encodeURIComponent(newPath);
-}
+};
 
 exports.hashesAreTheSame = function (md5, etag) {
     if (md5 === etag) {
         return true;
     }
     return false;
-}
+};
 
 exports.createS3Client = function (awsAccessKey, awsSecretKey, awsBucket) {
     return s3.createClient({
@@ -179,23 +185,27 @@ exports.createS3Client = function (awsAccessKey, awsSecretKey, awsBucket) {
         secret: awsSecretKey,
         bucket: awsBucket
     });
-}
+};
 
-exports.uploadIfNotAlreadyOnS3 = function (arrayMD5AndEtag, awsAccessKey, awsSecretKey, awsBucket, filePathToBackup) {
+exports.uploadIfNotAlreadyOnS3 = function (results, awsAccessKey, awsSecretKey, awsBucket) {
     var md5,
-        etag;
+        etag,
+        inputPath,
+        outputPath;
 
-    if (arrayMD5AndEtag && arrayMD5AndEtag.length === 2 && typeof arrayMD5AndEtag[0].md5 === 'string' && arrayMD5AndEtag[0].md5.length > 0) {
-        md5 = arrayMD5AndEtag[0].md5;
-        etag = arrayMD5AndEtag[1].etag;
+    if (results && results.length === 3 && typeof results[0].md5 === 'string' && results[0].md5.length > 0) {
+        md5 = results[0].md5;
+        etag = results[1].etag;
+        inputPath = results[2].inputPath;
+        outputPath = results[2].outputPath;
         if (exports.hashesAreTheSame(md5, etag)) {
             return Q({message: 'file already uploaded'});
         } else {
             var client = exports.createS3Client(awsAccessKey, awsSecretKey, awsBucket);
             // upload a file to s3
-            return exports.uploadFile(client, filePathToBackup);
+            return exports.uploadFile(client, inputPath, outputPath);
         }
     } else {
         return Q.reject(new Error('results not expected'));
     }
-}
+};
