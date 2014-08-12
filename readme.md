@@ -12,24 +12,26 @@ Backup a file to S3, but only if it has changed or has not been uploaded before.
 
         # install as a command-line tool
         npm install -g heirloom
-        
-        # setup these two AWS authentication keys in your environment:
 
+        # If you want to authenticate via environment variables, set these up:
         AWS_SECRET_ACCESS_KEY
         AWS_ACCESS_KEY_ID
 
+        # Or you can authenticate via the command-line:
+        heirloom -d aws-access-key-id -e aws-secret-access-key
+
 ## Usage
 
-### Copy one file to 'mybucketname' on S3. On S3 the file is saved using the full path in its name
+### Copy one file to 'myS3bucketname' on S3. On S3 the file is saved using the full path in its name
 
         $ heirloom --bucket myS3bucketname --input /Users/brian/Pictures/CA_1920x1080_05.jpg
 
-### Copy one file to 'mybucketname' on S3 but strip off 2 levels of the path.
+### Copy one file to 'myS3bucketname' on S3 but strip off 2 levels of the path.
 
         # save to S3 as /Pictures/CA_1920x1080_05.jpg
         $ heirloom --bucket myS3bucketname --input /Users/brian/Pictures/CA_1920x1080_05.jpg --strip 2
 
-### Copy one file to 'mybucketname' on S3 but strip off 2 levels of the path, plus prepend a new root path
+### Copy one file to 'myS3bucketname' on S3 but strip off 2 levels of the path, plus prepend a new root path
 
         # save to S3 as /SomewhereElse/Pictures/CA_1920x1080_05.jpg
         $ heirloom --bucket myS3bucketname --input /Users/brian/Pictures/CA_1920x1080_05.jpg --strip 2 --prepend '/SomewhereElse'
@@ -51,8 +53,7 @@ Find by multiple extensions (case insensitive)
 Find all files in the folder
 
         $ find /Users/brian/Pictures -exec heirloom --bucket myS3bucketname --input \{\} \;
-        
+
 Note that you should use an absolute path for "find" so that it includes an absolute path in the results.
 
 The filename and path are used for the full name on S3.
-        
