@@ -41,7 +41,7 @@ describe('toS3', function () {
             expect(result).to.equal(-1)
         });
     });
-    
+
     describe('#setInputOutputPaths', function () {
         it('should return promise with an inputPath and outputPath hash', function (done) {
             var filePathToBackup = '/Users/brian/Pictures/bombshell.jpg',
@@ -49,7 +49,7 @@ describe('toS3', function () {
                 outputPath = '/Pictures/bombshell.jpg';
 
             var promise = toS3.setInputOutputPaths(filePathToBackup, numberOfPathPartsToStrip);
-            
+
             expect(promise).to.eventually.deep.equal({
                 inputPath: filePathToBackup,
                 outputPath: outputPath
@@ -74,7 +74,7 @@ describe('toS3', function () {
     describe('#md5Calc', function () {
         it('should calc proper MD5', function (done) {
             var fileStream = new stream();
-            
+
             var promise = toS3.md5Calc(fileStream);
             expect(promise).to.eventually.deep.equal({
                 md5: '6363f0d465541022f9b743c2f745b493'
@@ -126,7 +126,7 @@ describe('toS3', function () {
 
             e.emit('response', res);
         });
-        
+
         it('should return an empty etag (if file does not exist)', function (done) {
             var res = {
                 headers: {
@@ -141,7 +141,7 @@ describe('toS3', function () {
 
             e.emit('response', res);
         });
-        
+
     });
 
     describe('#hashesAreTheSame', function () {
@@ -176,7 +176,7 @@ describe('toS3', function () {
 
         it('should trigger message when file upload finishes', function (done) {
             var SUCCESS_UPLOAD = 'file uploaded';
-            
+
             var promise = toS3.uploadFile(client, filePathToBackup);
             expect(promise).to.eventually.deep.equal({
                 message: SUCCESS_UPLOAD
@@ -189,40 +189,40 @@ describe('toS3', function () {
             var inputPath = '/User/brian/hello.jpg',
                 outputPath = '';
             var promise = toS3.uploadFile(client, inputPath, outputPath);
-            expect(promise).to.be.rejected.with('unable to upload /User/brian/hello.jpg due to some error').and.notify(done);
+            expect(promise).to.be.rejectedWith('unable to upload /User/brian/hello.jpg due to some error').and.notify(done);
             e.emit('error', 'some error');
         });
-        
+
     });
-    
+
     describe('#uploadIfNotAlreadyOnS3', function () {
         describe('promise (rejected path)', function () {
             it('should reject if no MD5/ETAG array', function (done) {
                 var arrayMD5AndEtag = undefined;
                 var promise = toS3.uploadIfNotAlreadyOnS3(arrayMD5AndEtag);
-                expect(promise).to.be.rejected.with('results not expected').and.notify(done);
+                expect(promise).to.be.rejectedWith('results not expected').and.notify(done);
             });
 
             it('should reject if empty array', function (done) {
                 var arrayMD5AndEtag = [];
                 var promise = toS3.uploadIfNotAlreadyOnS3(arrayMD5AndEtag);
-                expect(promise).to.be.rejected.with('results not expected').and.notify(done);
+                expect(promise).to.be.rejectedWith('results not expected').and.notify(done);
             });
 
             it('should reject if missing ETAG parameter', function (done) {
                 var arrayMD5AndEtag = [{etag:'xxx'}];
                 var promise = toS3.uploadIfNotAlreadyOnS3(arrayMD5AndEtag);
-                expect(promise).to.be.rejected.with('results not expected').and.notify(done);
+                expect(promise).to.be.rejectedWith('results not expected').and.notify(done);
             });
 
             it('should reject if missing MD5 parameter', function (done) {
                 var arrayMD5AndEtag = [{md5:'xxx'}];
                 var promise = toS3.uploadIfNotAlreadyOnS3(arrayMD5AndEtag);
-                expect(promise).to.be.rejected.with('results not expected').and.notify(done);
+                expect(promise).to.be.rejectedWith('results not expected').and.notify(done);
             });
 
         });
-        
+
         describe('promise (file already uploaded)', function () {
             it('should return message if file already uploaded', function (done) {
                 var results = [{md5: 'xxx'}, {etag: 'xxx'}, {inputPath: '', outputPath: ''}];
@@ -242,12 +242,12 @@ describe('toS3', function () {
                     filePathToBackup = '';
 
                 var results = [{md5: 'xxx'}, {etag: 'yyy'}, {inputPath: filePathToBackup, outputPath: ''}];
-                
+
                 sinon.stub(toS3, 'createS3Client').returns({});
                 sinon.stub(toS3, 'uploadFile').returns(Q({message: SUCCESS_UPLOAD}));
-                
+
                 var promise = toS3.uploadIfNotAlreadyOnS3(results, awsAccessKey, awsSecretKey, awsBucket);
-                
+
                 expect(promise).to.eventually.deep.equal({
                     message: SUCCESS_UPLOAD
                 }).and.notify(done);
@@ -311,5 +311,3 @@ describe('toS3', function () {
     });
 
 });
-
-
